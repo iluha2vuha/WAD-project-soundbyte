@@ -1,0 +1,102 @@
+<article class="card h-100">
+    {% if show_cover %}
+        {% if song.album.cover_image %}
+            <img class="track-cover"
+                 src="{{ song.album.cover_image.url }}"
+                 alt="{{ song.album.title }} cover"
+                 loading="lazy">
+        {% else %}
+            <div class="track-cover cover-placeholder" aria-hidden="true">♫</div>
+        {% endif %}
+    {% endif %}
+    <div class="card-body d-flex flex-column">
+        {% if rank %}
+            <p class="eyebrow">#{{ rank }} trending</p>
+        {% endif %}
+        <h3 class="card-title mb-1">{{ song.title }}</h3>
+        <p class="track-meta mb-2">by <a href="{% url 'soundbytes:profile' song.artist %}">{{ song.artist }}</a>
+        </p>
+        {% if show_details %}
+            <p class="small mb-2">Album: <a href="{% url 'soundbytes:album_page' song.album.id %}">{{ song.album.title }}</a>
+            </p>
+            <p class="track-meta mb-2">
+                {% for genre in song.genres.all %}
+                    <span class="badge text-bg-dark border me-1">{{ genre.name }}</span>
+                {% endfor %}
+                {% if song.tags %}
+                    <span>{{ song.tags }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
+        <div class="track-stats mt-auto">
+            <span>{{ song.view_count }} views</span>
+            <span>{{ song.like_count }} likes</span>
+            <span>{{ song.download_count }} downloads</span>
+        </div>
+        <audio controls preload="none" aria-label="Listen to {{ song.title }}">
+            <source src="{% url 'soundbytes:stream_song' song.id %}" type="audio/mpeg">
+        </audio>
+        {% if show_download or show_like %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                {% if show_like and request.user.is_authenticated %}
+                    <form method="post" action="{% url 'soundbytes:toggle_like' song.id %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-secondary btn-sm" type="submit">Like / Unlike</button>
+                    </form>
+                {% endif %}
+                {% if show_download %}
+                    <a class="btn btn-outline-secondary btn-sm"
+                       href="{% url 'soundbytes:download_song' song.id %}">Download</a>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if show_comments %}
+            {% if request.user.is_authenticated %}
+                <form class="track-interactions"
+                      method="post"
+                      action="{% url 'soundbytes:add_comment' song.id %}">
+                    {% csrf_token %}
+                    <label class="form-label" for="comment-{{ song.id }}">Add a comment</label>
+                    <div class="d-flex flex-column flex-sm-row gap-2">
+                        <input class="form-control form-control-sm"
+                               id="comment-{{ song.id }}"
+                               name="body"
+                               placeholder="Share your thoughts"
+                               maxlength="500"
+                               required>
+                        <button class="btn btn-primary btn-sm" type="submit">Comment</button>
+                    </div>
+                </form>
+            {% endif %}
+            {% if song.comments.all %}
+                <div class="comment-list">
+                    <h4 class="small fw-semibold">Comments</h4>
+                    {% for comment in song.comments.all|slice:':5' %}
+                        <p>
+                            <strong>{{ comment.user.username }}</strong> <span class="text-body-secondary">{{ comment.body }}</span>
+                        </p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endif %}
+        {% if show_playlists and request.user.is_authenticated %}
+            <form class="track-interactions"
+                  method="post"
+                  action="{% url 'soundbytes:add_to_playlist' %}">
+                {% csrf_token %}
+                <input type="hidden" name="song_id" value="{{ song.id }}">
+                <label class="form-label" for="playlist-{{ song.id }}">Add to a playlist</label>
+                <select class="form-select form-select-sm mb-2"
+                        id="playlist-{{ song.id }}"
+                        name="playlist_slug"
+                        required>
+                    <option value="">Choose your playlist</option>
+                    {% for p in playlists %}
+                        <option value="{{ p.slug }}">{{ p.title }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary btn-sm" type="submit">Add to Playlist</button>
+            </form>
+        {% endif %}
+    </div>
+</article>

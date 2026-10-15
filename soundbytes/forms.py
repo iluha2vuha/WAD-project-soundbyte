@@ -3,7 +3,18 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from .models import Profile,Playlist
 
-class UserForm(forms.ModelForm):
+class BootstrapModelForm(forms.ModelForm):
+    """Apply Bootstrap controls consistently to the existing model forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = (
+                'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
+            )
+
+
+class UserForm(BootstrapModelForm):
     password = forms.CharField(widget=forms.PasswordInput())
     confirm_password = forms.CharField(widget=forms.PasswordInput())
 
@@ -20,12 +31,12 @@ class UserForm(forms.ModelForm):
             raise forms.ValidationError("Password Mismatch")
         return data
 
-class ProfileForm(forms.ModelForm):
+class ProfileForm(BootstrapModelForm):
     class Meta:
         model = Profile
         fields = ('artist_name','profile_picture','user_type','bio')
 
-class PlaylistForm(forms.ModelForm):
+class PlaylistForm(BootstrapModelForm):
     class Meta:
         model = Playlist
         fields = ['title']  # only the playlist title is needed

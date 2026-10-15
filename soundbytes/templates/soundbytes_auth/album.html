@@ -1,26 +1,28 @@
-{% extends 'authbase.html' %}
-
-{% block title %}Album{% endblock %}
-
+{% extends "authbase.html" %}
+{% block title %}{{ album.title }}{% endblock %}
 {% block body %}
-<div class="content-card">
-<h2>{{ album.title }}</h2>
-<p>{{ album.artist }}</p>
-
-{% if album.cover_image %}
-    <img src="{{ album.cover_image.url }}" width="200">
-{% endif %}
-
-<h3>Songs:</h3>
-
-{% for song in songs %}
-    <div>
-        <p>{{ song.title }}</p>
-
-        <audio controls>
-            <source src="{% url 'soundbytes:stream_song' song.id %}" type="audio/mpeg">
-        </audio>
+    <header class="page-heading d-flex align-items-center flex-wrap gap-4">
+        {% if album.cover_image %}
+            <img class="album-cover"
+                 src="{{ album.cover_image.url }}"
+                 alt="{{ album.title }} cover">
+        {% endif %}
+        <div>
+            <p class="eyebrow">Album</p>
+            <h1>{{ album.title }}</h1>
+            <p class="text-body-secondary mb-0">{{ album.artist }}</p>
+        </div>
+    </header>
+    <div class="section-heading">
+        <h2>Tracks</h2>
     </div>
-{% endfor %}
-</div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 song-grid">
+        {% for song in songs %}
+            <div class="col">{% include "components/song_card.html" %}</div>
+        {% empty %}
+            <div class="col w-100">
+                <p class="empty-state">No songs in this album yet.</p>
+            </div>
+        {% endfor %}
+    </div>
 {% endblock %}

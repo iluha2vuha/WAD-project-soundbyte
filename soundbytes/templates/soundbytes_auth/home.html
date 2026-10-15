@@ -1,76 +1,70 @@
-{% extends 'authbase.html' %}
-{% load static %}
-
-{% block title %}Home{% endblock %}
-
+{% extends "authbase.html" %}
+{% block title %}Discover{% endblock %}
 {% block body %}
-<div class="content-card">
-    <h1>{% if user.is_authenticated %}Welcome back, {{ user.username }}.{% else %}Welcome to Soundbytes.{% endif %}</h1>
-    <p>Jump into recent uploads, discover what is trending, or head straight to your profile.</p>
-
-    <div class="home-actions">
-        <a href="{% url 'soundbytes:search_page' %}" class="action-btn">Browse songs</a>
-        <a href="{% url 'soundbytes:trending' %}" class="action-btn">Open trending</a>
-        {% if user.is_authenticated %}
-            <a href="{% url 'soundbytes:profile' user.username %}" class="action-btn">Open profile</a>
-        {% else %}
-            <a href="{% url 'soundbytes:signin' %}" class="action-btn">Sign in</a>
-        {% endif %}
+    <section class="hero">
+        <p class="eyebrow">Independent music. Shared here.</p>
+        <h1 class="mb-3">Find your next favourite.</h1>
+        <p class="lead mb-4">Fresh tracks, independent artists and a place to share your sound. Explore what's new on SoundByte.</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary"
+               href="{% url 'soundbytes:search_page' %}">Explore music <span aria-hidden="true">↗</span>
+            </a>
+            <a class="btn btn-outline-secondary"
+               href="{% url 'soundbytes:trending' %}">What's trending</a>
+        </div>
+    </section>
+    <section class="music-section" aria-labelledby="recent-heading">
+        <div class="section-heading">
+            <h2 id="recent-heading">Recent releases</h2>
+            <a href="{% url 'soundbytes:search_page' %}">Browse all tracks <span aria-hidden="true">→</span>
+            </a>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 song-grid">
+            {% for song in recent_songs %}
+                <div class="col">{% include "components/song_card.html" with show_cover=True %}</div>
+            {% empty %}
+                <div class="col w-100">
+                    <p class="empty-state">No songs uploaded yet.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    <div class="row g-4 mt-3">
+        <section class="col-lg-6" aria-labelledby="trending-heading">
+            <div class="section-heading">
+                <h2 id="trending-heading">Trending now</h2>
+                <a href="{% url 'soundbytes:trending' %}">View all <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="list-group">
+                {% for song in trending_songs %}
+                    <div class="list-group-item d-flex align-items-center gap-3 py-3">
+                        <span class="rank">{{ forloop.counter|stringformat:'02d' }}</span>
+                        <div class="flex-grow-1">
+                            <a class="track-title fw-semibold"
+                               href="{% url 'soundbytes:album_page' song.album.id %}">{{ song.title }}</a>
+                            <div class="track-meta">
+                                <a href="{% url 'soundbytes:profile' song.artist %}">{{ song.artist }}</a>
+                            </div>
+                        </div>
+                        <span class="track-meta text-nowrap">{{ song.like_count }} likes</span>
+                    </div>
+                {% empty %}
+                    <p class="empty-state">No trending songs yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="col-lg-6" aria-labelledby="posts-heading">
+            <div class="section-heading">
+                <h2 id="posts-heading">From the community</h2>
+            </div>
+            <div class="d-grid gap-3">
+                {% for post in recent_posts %}
+                    {% include "components/post_card.html" %}
+                {% empty %}
+                    <p class="empty-state">No posts yet.</p>
+                {% endfor %}
+            </div>
+        </section>
     </div>
-</div>
-
-<div class="content-card">
-    <h2>Recent songs</h2>
-    {% for song in recent_songs %}
-        <div class="song-list-item">
-            <div>
-                <strong>{{ song.title }}</strong>
-                <p>by <a href="{% url 'soundbytes:profile' song.artist %}">{{ song.artist }}</a></p>
-            </div>
-            <div>
-                <span>{{ song.view_count }} views</span>
-                <span>{{ song.download_count }} downloads</span>
-                <span>{{ song.like_count }} likes</span>
-            </div>
-        </div>
-    {% empty %}
-        <p>No songs uploaded yet.</p>
-    {% endfor %}
-</div>
-
-<div class="content-card">
-    <h2>Trending now</h2>
-    {% for song in trending_songs %}
-        <div class="song-list-item">
-            <div>
-                <strong>{{ song.title }}</strong>
-                <p>by <a href="{% url 'soundbytes:profile' song.artist %}">{{ song.artist }}</a></p>
-            </div>
-            <div>
-                <span>{{ song.view_count }} views</span>
-                <span>{{ song.download_count }} downloads</span>
-                <span>{{ song.like_count }} likes</span>
-            </div>
-        </div>
-    {% empty %}
-        <p>No trending songs yet.</p>
-    {% endfor %}
-</div>
-
-<div class="content-card">
-    <h2>Recent posts</h2>
-    {% for post in recent_posts %}
-        <div class="post-card">
-            {% if post.text_content %}
-                <p>{{ post.text_content }}</p>
-            {% endif %}
-            {% if post.image %}
-                <img src="{{ post.image.url }}" alt="post image" class="post-image">
-            {% endif %}
-            <p>{{ post.like_count }} likes</p>
-        </div>
-    {% empty %}
-        <p>No posts yet.</p>
-    {% endfor %}
-</div>
 {% endblock %}

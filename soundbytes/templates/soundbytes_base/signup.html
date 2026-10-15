@@ -1,21 +1,27 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}
-	Sign-Up
-{% endblock %}
-
+{% extends "base.html" %}
+{% block title %}Sign up{% endblock %}
 {% block body %}
-	<h1>Sign up to Soundbytes</h1>
-	{% if registered %}
-		You are now registered
-		<a href="{% url 'soundbytes:signin' %}">Go to Sign In</a>
-	{% else %}
-		<form id="user_form" method="post" action="{% url 'soundbytes:signup' %}" enctype="multipart/form-data">
-			{% csrf_token %}
-			{{ user_form.as_p }}
-			{{ profile_form.as_p }}
-			<input type="submit" name="submit" value="Register" />
-		</form>
-	{% endif %}
+    <div class="card form-card">
+        <div class="card-body p-lg-4">
+            <p class="eyebrow">Join the community</p>
+            <h1 class="h2 mb-2">Make yourself heard.</h1>
+            {% if registered %}
+                <p class="text-body-secondary mt-3">Your account is ready.</p>
+                <a class="btn btn-primary" href="{% url 'soundbytes:signin' %}">Go to Sign In</a>
+            {% else %}
+                <p class="text-body-secondary mb-4">Create your SoundByte account to join the conversation.</p>
+                <form id="user_form"
+                      method="post"
+                      action="{% url 'soundbytes:signup' %}"
+                      enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% include "components/form_fields.html" with form=user_form %}
+                    {% include "components/form_fields.html" with form=profile_form %}
+                    <button class="btn btn-primary" type="submit">Register</button>
+                </form>
+                <p class="small text-body-secondary mt-4 mb-0">Already have an account? <a href="{% url 'soundbytes:signin' %}">Sign in</a>
+                </p>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

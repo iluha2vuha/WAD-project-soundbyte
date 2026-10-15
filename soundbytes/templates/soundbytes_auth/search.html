@@ -1,116 +1,72 @@
-{% extends 'authbase.html' %}
-
+{% extends "authbase.html" %}
 {% block title %}Search{% endblock %}
-
 {% block body %}
-<div class="content-card">
-<form method="GET" action="/search-page/">
-    <input type="text" name="q" placeholder="Search...">
-
-    <select name="type">
-        <option value="all">All</option>
-        <option value="songs">Songs</option>
-        <option value="posts">Posts</option>
-    </select>
-
-    <select name="genre">
-        <option value="">All</option>
-        {% for genre in genres %}
-            <option value="{{ genre.name }}">{{ genre.name }}</option>
-        {% endfor %}
-    </select>
-
-    <select name="sort">
-        <option value="">Newest</option>
-        <option value="views">Most Viewed</option>
-        <option value="downloads">Most Downloaded</option>
-        <option value="likes">Most Liked</option>
-    </select>
-
-    <button type="submit">Search</button>
-</form>
-
-<h2>Results:</h2>
-
-{% for item in results %}
-    <div style="border:1px solid #ccc; padding:15px; margin:15px 0; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: table;">
-        {% if item.type == 'song' %}
-            <div>
-                <h3>{{ item.data.title }}</h3>
-                <p>
-                    Artist:
-                    <a href="{% url 'soundbytes:profile' item.data.artist %}">
-                        {{ item.data.artist }}
-                    </a>
-                </p>
-
-                <p>
-                    Album:
-                    <a href="{% url 'soundbytes:album_page' item.data.album.id %}">
-                        {{ item.data.album.title }}
-                    </a>
-                </p>
-
-                <p>
-                    Genres:
-                    {% for genre in item.data.genres.all %}
-                        {{ genre.name }}{% if not forloop.last %}, {% endif %}
+    <header class="page-heading">
+        <p class="eyebrow">Explore SoundByte</p>
+        <h1>Find your sound.</h1>
+        <p class="text-body-secondary">Search tracks, artists, genres and community posts.</p>
+    </header>
+    <form class="card mb-4"
+          method="get"
+          action="{% url 'soundbytes:search_page' %}">
+        <div class="card-body row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
+                <label class="form-label" for="query">Search</label>
+                <input class="form-control"
+                       id="query"
+                       name="q"
+                       placeholder="Track, artist or keyword"
+                       value="{{ request.GET.q }}">
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="type">Content</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="all">All content</option>
+                    <option value="songs" {% if request.GET.type == 'songs' %}selected{% endif %}>Songs</option>
+                    <option value="posts" {% if request.GET.type == 'posts' %}selected{% endif %}>Posts</option>
+                </select>
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label" for="genre">Genre</label>
+                <select class="form-select" id="genre" name="genre">
+                    <option value="">All genres</option>
+                    {% for genre in genres %}
+                        <option value="{{ genre.name }}"
+                                {% if request.GET.genre == genre.name %}selected{% endif %}>{{ genre.name }}</option>
                     {% endfor %}
-                </p>
-
-                <p>Tags: {{ item.data.tags }}</p>
-
-                <p>Views: {{ item.data.view_count }}</p>
-                <p>Downloads: {{ item.data.download_count }}</p>
-                <p>Likes: {{ item.data.like_count }}</p>
-
-                <p>
-                    <a href="{% url 'soundbytes:download_song' item.data.id %}">Download</a>
-                </p>
-
-                <audio controls>
-                    <source src="{% url 'soundbytes:stream_song' item.data.id %}" type="audio/mpeg">
-                </audio>
-
-                {% if user.is_authenticated %}
-                    <form method="post" action="{% url 'soundbytes:toggle_like' item.data.id %}" style="margin-top:10px;">
-                        {% csrf_token %}
-                        <button type="submit">Like / Unlike</button>
-                    </form>
-
-                    <form method="post" action="{% url 'soundbytes:add_comment' item.data.id %}" style="margin-top:10px;">
-                        {% csrf_token %}
-                        <input type="text" name="body" placeholder="Add a comment">
-                        <button type="submit">Comment</button>
-                    </form>
-                {% endif %}
-
-                {% if item.data.comments.all %}
-                    <div style="margin-top:10px;">
-                        <strong>Comments</strong>
-                        {% for comment in item.data.comments.all|slice:":5" %}
-                            <p>{{ comment.user.username }}: {{ comment.body }}</p>
-                        {% empty %}
-                            <p>No comments yet.</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+                </select>
             </div>
-
-        {% elif item.type == 'post' %}
-            <div>
-                {% if item.data.text_content %}
-                    <p>{{ item.data.text_content }}</p>
-                {% endif %}
-
-                {% if item.data.image %}
-                    <img src="{{ item.data.image.url }}" width="200">
-                {% endif %}
-
-                <p>Likes: {{ item.data.like_count }}</p>
+            <div class="col-8 col-lg-2">
+                <label class="form-label" for="sort">Sort by</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="">Newest</option>
+                    <option value="views" {% if request.GET.sort == 'views' %}selected{% endif %}>Most viewed</option>
+                    <option value="downloads"
+                            {% if request.GET.sort == 'downloads' %}selected{% endif %}>Most downloaded</option>
+                    <option value="likes" {% if request.GET.sort == 'likes' %}selected{% endif %}>Most liked</option>
+                </select>
             </div>
-        {% endif %}
+            <div class="col-4 col-lg-2">
+                <button class="btn btn-primary w-100" type="submit">Search</button>
+            </div>
+        </div>
+    </form>
+    <div class="section-heading">
+        <h2>Results</h2>
     </div>
-{% endfor %}
-</div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 song-grid">
+        {% for item in results %}
+            <div class="col">
+                {% if item.type == "song" %}
+                    {% include "components/song_card.html" with song=item.data show_details=True show_download=True show_like=True show_comments=True %}
+                {% else %}
+                    {% include "components/post_card.html" with post=item.data %}
+                {% endif %}
+            </div>
+        {% empty %}
+            <div class="col w-100">
+                <p class="empty-state">No results found. Try another artist, title or genre.</p>
+            </div>
+        {% endfor %}
+    </div>
 {% endblock %}

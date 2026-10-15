@@ -1,165 +1,153 @@
-{% extends 'authbase.html' %}
-{% load static %}
-
-{% block head %}
-<link rel="stylesheet" href="{% static 'css/profile.css' %}">
-{% endblock %}
-
-{% block title %}Profile - {{ profile_user.username }}{% endblock %}
-
+{% extends "authbase.html" %}
+{% block title %}{{ profile.get_display_name }}{% endblock %}
 {% block body %}
-<div class="content-card profile-container">
-    <div class="profile-header">
-        <div class="profile-info">
-            <div class="profile-avatar">
+    <section class="card mb-4">
+        <div class="card-body p-lg-4">
+            <div class="d-flex align-items-start flex-wrap gap-4">
                 {% if profile.profile_picture %}
-                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile_user.username }}">
+                    <img class="profile-avatar"
+                         src="{{ profile.profile_picture.url }}"
+                         alt="{{ profile.get_display_name }}">
                 {% else %}
-                    {% if profile.is_artist %}🎤{% else %}👤{% endif %}
+                    <div class="profile-avatar" aria-hidden="true">{{ profile.get_display_name|first|upper }}</div>
                 {% endif %}
-            </div>
-            <div class="profile-details">
-                <div class="profile-name">
-                    {{ profile.get_display_name }}
-                    {% if profile.is_artist %}
-                        <span class="verified-badge">✓ Verified Artist</span>
-                    {% endif %}
-                </div>
-                <div class="profile-username">@{{ profile_user.username }}</div>
-                {% if profile.bio %}
-                    <div class="profile-bio">{{ profile.bio }}</div>
-                {% endif %}
-                <div class="profile-stats">
-                    <div class="stat">
-                        <div class="stat-number" id="follower-count">{{ profile.follower_count|default:0 }}</div>
-                        <div class="stat-label">Followers</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number" id="following-count">{{ profile.following_count|default:0 }}</div>
-                        <div class="stat-label">Following</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number" id="profile-views">{{ profile.profile_views|default:0 }}</div>
-                        <div class="stat-label">Profile Views</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">{{ total_song_likes }}</div>
-                        <div class="stat-label">Song Likes</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">{{ total_song_comments }}</div>
-                        <div class="stat-label">Comments</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">{{ total_song_views }}</div>
-                        <div class="stat-label">Song Views</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">{{ total_song_downloads }}</div>
-                        <div class="stat-label">Downloads</div>
-                    </div>
-                </div>
-            </div>
-            <div class="profile-actions">
-                {% if is_own_profile %}
-                    <button id="edit-profile-btn" class="action-btn">✏️ Edit Profile</button>
+                <div class="flex-grow-1">
+                    <p class="eyebrow mb-2">{% if profile.is_artist %}Artist{% else %}Listener{% endif %}</p>
+                    <h1 class="mb-1">{{ profile.get_display_name }} {% if profile.is_verified_artist %}
+                        <span class="badge badge-artist fs-6">Verified</span>
+{% endif %}
+</h1>
+<p class="text-body-secondary mb-2">@{{ profile_user.username }}</p>
+{% if profile.bio %}
+    <p class="profile-bio mb-0">{{ profile.bio }}</p>
+{% endif %}
+</div>
+<div class="d-flex gap-2">
+    {% if is_own_profile %}
+        <button class="btn btn-outline-secondary btn-sm"
+                id="edit-profile-btn"
+                type="button">Edit Profile</button>
+    {% elif request.user.is_authenticated %}
+        <form method="post"
+              action="{% url 'soundbytes:toggle_follow' profile_user.username %}">
+            {% csrf_token %}
+            <button class="btn btn-primary btn-sm"
+                    type="submit">{% if is_following %}Following{% else %}Follow{% endif %}</button>
+        </form>
+    {% endif %}
+</div>
+</div>
+<div class="profile-stats">
+    <div>
+        <strong>{{ profile.follower_count }}</strong>
+        <span>Followers</span>
+    </div>
+    <div>
+        <strong>{{ profile.following_count }}</strong>
+        <span>Following</span>
+    </div>
+    <div>
+        <strong>{{ profile.profile_views }}</strong>
+        <span>Profile views</span>
+    </div>
+    <div>
+        <strong>{{ total_song_views }}</strong>
+        <span>Song views</span>
+    </div>
+    <div>
+        <strong>{{ total_song_downloads }}</strong>
+        <span>Downloads</span>
+    </div>
+    <div>
+        <strong>{{ total_song_likes }}</strong>
+        <span>Song likes</span>
+    </div>
+    <div>
+        <strong>{{ total_song_comments }}</strong>
+        <span>Comments</span>
+    </div>
+</div>
+</div>
+</section>
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-5">
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="eyebrow">Most liked</p>
+                {% if top_liked_song %}
+                    <h2 class="h6">{{ top_liked_song.title }}</h2>
+                    <p class="track-meta mb-0">{{ top_liked_song.like_count }} likes</p>
                 {% else %}
-                    {% if user.is_authenticated %}
-                        <form method="post" action="{% url 'soundbytes:toggle_follow' profile_user.username %}">
-                            {% csrf_token %}
-                            <button id="follow-btn" class="action-btn {% if is_following %}following{% endif %}" type="submit">
-                                {% if is_following %}Following{% else %}Follow{% endif %}
-                            </button>
-                        </form>
-                    {% endif %}
+                    <p class="text-body-secondary mb-0">No songs yet.</p>
                 {% endif %}
-                <button id="like-page-btn" class="action-btn">❤️ <span id="page-likes-count">{{ total_song_likes }}</span> Likes</button>
             </div>
         </div>
     </div>
-
-    <div class="profile-content">
-        <div class="profile-summary-grid">
-            <div class="summary-card">
-                <h3>Most liked song</h3>
-                {% if top_liked_song %}
-                    <p><strong>{{ top_liked_song.title }}</strong></p>
-                    <p>{{ top_liked_song.like_count }} likes</p>
-                {% else %}
-                    <p>No songs yet.</p>
-                {% endif %}
-            </div>
-            <div class="summary-card">
-                <h3>Most viewed song</h3>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="eyebrow">Most viewed</p>
                 {% if top_viewed_song %}
-                    <p><strong>{{ top_viewed_song.title }}</strong></p>
-                    <p>{{ top_viewed_song.view_count }} views</p>
+                    <h2 class="h6">{{ top_viewed_song.title }}</h2>
+                    <p class="track-meta mb-0">{{ top_viewed_song.view_count }} views</p>
                 {% else %}
-                    <p>No songs yet.</p>
+                    <p class="text-body-secondary mb-0">No songs yet.</p>
                 {% endif %}
             </div>
-            <div class="summary-card">
-                <h3>Most downloaded song</h3>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="eyebrow">Most downloaded</p>
                 {% if top_downloaded_song %}
-                    <p><strong>{{ top_downloaded_song.title }}</strong></p>
-                    <p>{{ top_downloaded_song.download_count }} downloads</p>
+                    <h2 class="h6">{{ top_downloaded_song.title }}</h2>
+                    <p class="track-meta mb-0">{{ top_downloaded_song.download_count }} downloads</p>
                 {% else %}
-                    <p>No songs yet.</p>
+                    <p class="text-body-secondary mb-0">No songs yet.</p>
                 {% endif %}
             </div>
-        </div>
-
-        <h2 class="section-title">🎵 Songs</h2>
-        <div>
-            {% for song in songs %}
-                <div class="song-card">
-                    <h3>{{ song.title }}</h3>
-                    <p>Album: <a href="{% url 'soundbytes:album_page' song.album.id %}">{{ song.album.title }}</a></p>
-                    <p>Views: {{ song.view_count }} | Downloads: {{ song.download_count }} | Likes: {{ song.like_count }}</p>
-                    <p><a href="{% url 'soundbytes:download_song' song.id %}">Download</a></p>
-                    <audio controls>
-                        <source src="{% url 'soundbytes:stream_song' song.id %}" type="audio/mpeg">
-                    </audio>
-                    {% if user.is_authenticated %}
-                        <form method="post" action="{% url 'soundbytes:toggle_like' song.id %}" style="margin-top:10px;">
-                            {% csrf_token %}
-                            <button type="submit">Like / Unlike</button>
-                        </form>
-                        <form method="post" action="{% url 'soundbytes:add_comment' song.id %}" style="margin-top:10px;">
-                            {% csrf_token %}
-                            <input type="text" name="body" placeholder="Add a comment">
-                            <button type="submit">Comment</button>
-                        </form>
-                        <form method="post" action="{% url 'soundbytes:add_to_playlist' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="song_id" value="{{ song.id }}">
-                            <label for="playlist">Select a playlist:</label>
-                            <select id="playlist" name="playlist_slug">
-                                <option value="">Please choose a playlist</option>
-                                {% for p in playlists %}
-                                    <option value="{{ p.slug }}">{{ p.title }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="submit">Add to Playlist</button>
-                        </form>
-                    {% endif %}
-                </div>
-            {% empty %}
-                <p>No songs uploaded yet.</p>
-            {% endfor %}
-        </div>
-
-        <h2 class="section-title">💬 Recent Comments</h2>
-        <div>
-            {% for comment in recent_comments %}
-                <div class="comment-card">
-                    <p><strong>{{ comment.user.username }}</strong> on <strong>{{ comment.song.title }}</strong></p>
-                    <p>{{ comment.body }}</p>
-                </div>
-            {% empty %}
-                <p>No comments yet.</p>
-            {% endfor %}
         </div>
     </div>
 </div>
+<section class="music-section">
+    <div class="section-heading">
+        <h2>Songs</h2>
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 song-grid">
+        {% for song in songs %}
+            <div class="col">
+                {% include "components/song_card.html" with show_details=True show_like=True show_download=True show_comments=True show_playlists=True %}
+            </div>
+        {% empty %}
+            <div class="col w-100">
+                <p class="empty-state">No songs uploaded yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+<section class="music-section">
+    <div class="section-heading">
+        <h2>Recent comments</h2>
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 g-3">
+        {% for comment in recent_comments %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <p class="small mb-2">
+                            <strong>{{ comment.user.username }}</strong>
+                            <span class="text-body-secondary">on {{ comment.song.title }}</span>
+                        </p>
+                        <p class="mb-0">{{ comment.body }}</p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col w-100">
+                <p class="empty-state">No comments yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}

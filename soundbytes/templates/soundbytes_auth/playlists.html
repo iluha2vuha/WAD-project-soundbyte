@@ -1,16 +1,41 @@
-{% extends 'authbase.html' %}
-{% load static %}
-
+{% extends "authbase.html" %}
+{% block title %}Playlists{% endblock %}
 {% block body %}
-    <h1>{{ user.username }}'s Playlists</h1>
-    {% for p in playlists %}
-        <div style="border:1px solid #ccc; padding:15px; margin:15px 0; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: table;">
-            <a href="{% url 'soundbytes:playlist' username=user.username slug=p.slug %}">{{ p }}</a>
-        </div>
-    {% endfor %}
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Create Playlist</button>
-    </form>
+    <header class="page-heading">
+        <p class="eyebrow">In rotation</p>
+        <h1>{{ user.username }}'s Playlists</h1>
+        <p class="text-body-secondary">Your music, in your own order.</p>
+    </header>
+    <div class="row g-4">
+        <section class="col-lg-8">
+            <div class="list-group">
+                {% for p in playlists %}
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-3 py-3"
+                       href="{% url 'soundbytes:playlist' username=user.username slug=p.slug %}">
+                        <div>
+                            <h2 class="h6 mb-1">{{ p.title }}</h2>
+                            <span class="track-meta">{{ p.songs.count }} track{{ p.songs.count|pluralize }}</span>
+                        </div>
+                        <span aria-hidden="true">→</span>
+                    </a>
+                {% empty %}
+                    <p class="empty-state">No playlists yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+        {% if request.user == user %}
+            <section class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Create a playlist</h2>
+                        <form method="post">
+                            {% csrf_token %}
+                            {% include "components/form_fields.html" %}
+                            <button class="btn btn-primary" type="submit">Create Playlist</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+    </div>
 {% endblock %}
