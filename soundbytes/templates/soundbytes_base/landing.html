@@ -56,8 +56,9 @@
         <h1>🎵 SoundByte</h1>
         <p>Discover, stream, and share amazing music with the world</p>
         <div class="buttons">
-            <a href="/signup/" class="btn">Get Started</a>
-            <a href="/signin/" class="btn btn-outline">Sign In</a>
+            <a href="{% url 'soundbytes:home' %}" class="btn">Explore Music</a>
+            <a href="{% url 'soundbytes:signup' %}" class="btn btn-outline">Sign Up</a>
+            <a href="{% url 'soundbytes:signin' %}" class="btn btn-outline">Sign In</a>
         </div>
     </div>
 {% endblock %}

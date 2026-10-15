@@ -53,7 +53,10 @@ CSRF_TRUSTED_ORIGINS = env_list(
     default='https://*.pythonanywhere.com',
 )
 
-LOGIN_URL = '/soundbytes/signin/'
+LOGIN_URL = 'soundbytes:signin'
+
+# Keep existing primary keys when running on newer Django versions.
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Application definition
 
@@ -136,8 +139,6 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 

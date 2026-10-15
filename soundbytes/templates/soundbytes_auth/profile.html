@@ -137,7 +137,7 @@
                             <select id="playlist" name="playlist_slug">
                                 <option value="">Please choose a playlist</option>
                                 {% for p in playlists %}
-                                    <option value="{{ logged.username}}{{ p.slug }}">{{ p.title }}</option>
+                                    <option value="{{ p.slug }}">{{ p.title }}</option>
                                 {% endfor %}
                             </select>
                             <button type="submit">Add to Playlist</button>

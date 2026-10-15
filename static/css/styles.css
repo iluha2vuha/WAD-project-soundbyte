@@ -11,6 +11,8 @@ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 .main {
 min-height: 100vh;
 display:flex;
+flex-direction: column;
+gap: 24px;
 justify-content: flex-start;
 align-items: flex-start;
 padding: 24px;
@@ -606,6 +608,8 @@ font-weight: 700;
     position: fixed;  /* sticks it to the viewport */
     width: 200px;
     top: 0;           /* distance from top of window */
+    max-height: 100vh;
+    overflow-y: auto;
     left: 0;          /* distance from left of window */
     background-color: #c3c3c3;
     padding: 10px;
@@ -664,5 +668,20 @@ font-weight: 700;
 
     .content-card {
         padding: 16px;
+    }
+}
+
+/* Keep the public navigation usable without JavaScript on narrow screens. */
+@media (max-width: 768px) {
+    .sidebar-main {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .main > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+    audio, .content-card img {
+        max-width: 100%;
     }
 }

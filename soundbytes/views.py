@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 from .functions.file_manager import create_song
 from .functions.search_function import search, sort_songs
 from .forms import UserForm,ProfileForm,PlaylistForm
@@ -40,6 +42,12 @@ def signup(request):
                              'profile_form':profile_form,
                              'registered':registered})
 def signin(request):
+    next_url = request.POST.get('next', request.GET.get('next', ''))
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = reverse('soundbytes:home')
+    error = None
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -47,13 +55,12 @@ def signin(request):
         if user:
             if user.is_active:
                 login(request,user)
-                return redirect(reverse('soundbytes:home'))
+                return redirect(next_url)
             else:
                 return HttpResponse("Your Soundbytes account is diabled")
         else:
-            return HttpResponse("Invalid sign-in details.")
-    else:
-        return render(request,'soundbytes_base/signin.html')
+            error = 'Invalid username or password.'
+    return render(request, 'soundbytes_base/signin.html', {'next': next_url, 'error': error})
     
 #Auth only below
     
@@ -105,6 +112,7 @@ def search_songs(request):
     songs = sort_songs(songs, sort_by)
     return JsonResponse(list(songs.values()), safe=False)
 
+@login_required
 def upload_page(request):
     genres = Genre.objects.all()
     albums = Album.objects.all()
@@ -174,13 +182,14 @@ def search_page(request):
     return render(request, 'soundbytes_auth/search.html', {'results': results, 'genres': genres})
 
 def stream_song(request, song_id):
-    song = Song.objects.get(id=song_id)
+    song = get_object_or_404(Song, id=song_id)
     #increase view count on stream
     song.view_count += 1
     song.save()
     #play song
     return FileResponse(song.audio_file.open(), content_type='audio/mpeg')
 
+@login_required
 def create_album(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -197,7 +206,7 @@ def create_album(request):
 
 def album_page(request, album_id):
     #displays songs in that album
-    album = Album.objects.get(id=album_id)
+    album = get_object_or_404(Album, id=album_id)
     songs = Song.objects.filter(album=album)
     return render(request, 'soundbytes_auth/album.html', {'album': album,'songs': songs})
 
@@ -220,8 +229,8 @@ def trending_page(request):
 def top_page(request):
     return redirect(reverse('soundbytes:trending'))
 
+@login_required
 def upload(request):
-    print("UPLOAD ROUTER HIT")
     if request.method == 'POST':
         content_type = request.POST.get('content_type')
         if content_type == 'song':
@@ -244,7 +253,7 @@ def upload_post(request):
 def profile(request, username):
     logged=request.user
     user = get_object_or_404(User, username=username)
-    profile = user.profile
+    profile = get_object_or_404(Profile, user=user)
     songs = Song.objects.filter(artist=user.username).order_by('-upload_date')
     recent_comments = Comment.objects.filter(song__artist=user.username).order_by('-created_at')[:10]
     total_song_views = sum(song.view_count for song in songs)
@@ -254,7 +263,8 @@ def profile(request, username):
     top_liked_song = songs.order_by('-like_count', '-view_count').first()
     top_viewed_song = songs.order_by('-view_count', '-like_count').first()
     top_downloaded_song = songs.order_by('-download_count', '-view_count').first()
-    playlists=Playlist.objects.filter(user=logged)
+    # Guests can view an artist without querying playlists for AnonymousUser.
+    playlists = Playlist.objects.filter(user=logged) if logged.is_authenticated else Playlist.objects.none()
     
     # Increment profile views
     if request.user.is_authenticated and request.user != user:
@@ -398,7 +408,7 @@ def playlists(request, username):
             playlist = form.save(commit=False)
             playlist.user = request.user  # assign the current user
             playlist.save()  # slug is generated automatically in model
-            return redirect('profile', username=request.user.username)
+            return redirect('soundbytes:playlists', username=request.user.username)
     else:
         form = PlaylistForm()
 
@@ -425,6 +435,7 @@ def playlist(request, username, slug):
     return render(request, 'soundbytes_auth/playlist.html', context)
 
 @login_required
+@require_POST
 def add_to_playlist(request):
     user = request.user
     if request.method == "POST":
