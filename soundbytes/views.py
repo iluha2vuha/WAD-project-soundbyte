@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import F
 from django.urls import reverse
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
@@ -24,12 +26,13 @@ def signup(request):
         user_form = UserForm(request.POST)
         profile_form = ProfileForm(request.POST, request.FILES)
         if user_form.is_valid() and profile_form.is_valid():
-            user = user_form.save()
-            user.set_password(user.password)
-            user.save()
-            profile = profile_form.save(commit=False)
-            profile.user = user
-            profile.save()
+            with transaction.atomic():
+                user = user_form.save(commit=False)
+                user.set_password(user.password)
+                user.save()
+                profile = profile_form.save(commit=False)
+                profile.user = user
+                profile.save()
             registered = True
         else:
             print(user_form.errors, profile_form.errors)
@@ -147,13 +150,18 @@ def search_page(request):
         'selected_genre': genre, 'content_type': content_type, 'sort_by': sort_by,
     })
 
+def _open_audio(song):
+    try:
+        return song.audio_file.open('rb')
+    except (FileNotFoundError, ValueError):
+        raise Http404('Audio file not found')
+
+
 def stream_song(request, song_id):
     song = get_object_or_404(Song, id=song_id)
-    #increase view count on stream
-    song.view_count += 1
-    song.save()
-    #play song
-    return FileResponse(song.audio_file.open(), content_type='audio/mpeg')
+    response = FileResponse(_open_audio(song), content_type='audio/mpeg')
+    Song.objects.filter(pk=song.pk).update(view_count=F('view_count') + 1)
+    return response
 
 @login_required
 def create_album(request):
@@ -273,17 +281,25 @@ def profile(request, username):
 
 def download_song(request, song_id):
     song = get_object_or_404(Song, id=song_id)
-    Download.objects.create(
-        user=request.user if request.user.is_authenticated else None,
-        song=song,
-    )
-    song.download_count += 1
-    song.save()
-    filename = song.audio_file.name.split('/')[-1]
-    return FileResponse(song.audio_file.open(), as_attachment=True, filename=filename)
+    audio = _open_audio(song)
+    response = FileResponse(audio, as_attachment=True, filename=song.audio_file.name.split('/')[-1])
+    with transaction.atomic():
+        Download.objects.create(user=request.user if request.user.is_authenticated else None, song=song)
+        Song.objects.filter(pk=song.pk).update(download_count=F('download_count') + 1)
+    return response
+
+
+def _interaction_redirect(request):
+    destination = request.META.get('HTTP_REFERER', '')
+    if not url_has_allowed_host_and_scheme(
+        destination, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        destination = reverse('soundbytes:search_page')
+    return redirect(destination)
 
 
 @login_required
+@transaction.atomic
 def toggle_like(request, song_id):
     if request.method != 'POST':
         return redirect(reverse('soundbytes:search_page'))
@@ -292,13 +308,12 @@ def toggle_like(request, song_id):
     like, created = Like.objects.get_or_create(user=request.user, song=song)
 
     if created:
-        song.like_count += 1
+        Song.objects.filter(pk=song.pk).update(like_count=F('like_count') + 1)
     else:
         like.delete()
-        song.like_count = max(0, song.like_count - 1)
+        Song.objects.filter(pk=song.pk, like_count__gt=0).update(like_count=F('like_count') - 1)
 
-    song.save()
-    return redirect(request.META.get('HTTP_REFERER', reverse('soundbytes:search_page')))
+    return _interaction_redirect(request)
 
 
 @login_required
@@ -309,12 +324,15 @@ def add_comment(request, song_id):
         if body:
             Comment.objects.create(user=request.user, song=song, body=body)
 
-    return redirect(request.META.get('HTTP_REFERER', reverse('soundbytes:search_page')))
+    return _interaction_redirect(request)
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def toggle_follow(request, username):
     target_user = get_object_or_404(User, username=username)
+    target_profile = get_object_or_404(Profile, user=target_user)
 
     if target_user == request.user:
         return redirect(reverse('soundbytes:profile', args=[target_user.username]))
@@ -325,10 +343,10 @@ def toggle_follow(request, username):
     )
 
     if created:
-        target_user.profile.followers.add(request.user)
+        target_profile.followers.add(request.user)
     else:
         follow.delete()
-        target_user.profile.followers.remove(request.user)
+        target_profile.followers.remove(request.user)
 
     return redirect(reverse('soundbytes:profile', args=[target_user.username]))
 

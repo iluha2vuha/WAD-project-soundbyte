@@ -44,7 +44,7 @@ python manage.py test
 python manage.py makemigrations --check --dry-run
 ```
 
-The regression tests cover public browsing, streaming and downloads, sign-in redirects, guest restrictions and playlist creation/ownership. They use an isolated test database and temporary media folder. They do not yet cover every feature or replace browser testing.
+The 33 regression tests cover public browsing, streaming and downloads (including missing files), sign-in redirects, guest restrictions, playlist creation/ownership, search filters, upload validation, signup slug collisions, likes, comments and follows. They use an isolated test database and temporary media folder. They do not yet cover every feature or replace browser testing.
 
 ## Improvements in this fork
 
@@ -58,6 +58,14 @@ First pass, based on the project feedback:
 - Corrected playlist option values and the playlist-creation redirect.
 - Fixed missing-song/album requests to return 404 responses.
 - Added 15 regression tests covering the above behaviour.
+
+Follow-up review:
+
+- Applied responsive Bootstrap dark layouts and removed the inactive Edit Profile button.
+- Preserved search filters and fixed post-only searches returning songs.
+- Validated song, post and album forms; successful song uploads return to their album.
+- Handled missing audio, malformed playlist requests and colliding profile/playlist slugs.
+- Restricted follow changes to POST, kept interaction redirects on-site and updated song counters atomically.
 
 ## Marker feedback backlog
 

@@ -51,7 +51,15 @@ class Profile(models.Model):
 
     def save(self,*args,**kwargs):
         if not self.slug:
-            self.slug=slugify(self.user.username)
+            max_length = self._meta.get_field('slug').max_length
+            base_slug = (slugify(self.user.username) or 'profile')[:max_length]
+            clean_slug = base_slug
+            index = 1
+            while Profile.objects.filter(slug=clean_slug).exclude(pk=self.pk).exists():
+                suffix = f'-{index}'
+                clean_slug = base_slug[:max_length - len(suffix)] + suffix
+                index += 1
+            self.slug = clean_slug
         super().save(*args,**kwargs)
 
     def __str__(self):

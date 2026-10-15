@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Album, Like, Playlist, Post, Profile, Song
+from .models import Album, Follow, Like, Playlist, Post, Profile, Song
 
 
 class BrowsingAndPlaylistTests(TestCase):
@@ -252,3 +252,62 @@ class BrowsingAndPlaylistTests(TestCase):
         })
         self.assertRedirects(response, reverse('soundbytes:upload_page'))
         self.assertTrue(Album.objects.filter(title='Second album').exists())
+
+    def test_like_toggle_updates_one_like_and_its_counter(self):
+        self.client.force_login(self.listener)
+        url = reverse('soundbytes:toggle_like', args=[self.song.pk])
+        for expected in [1, 0]:
+            self.client.post(url)
+            self.song.refresh_from_db()
+            self.assertEqual(self.song.likes.count(), expected)
+            self.assertEqual(self.song.like_count, expected)
+
+    def test_comments_save_nonempty_text(self):
+        self.client.force_login(self.listener)
+        url = reverse('soundbytes:add_comment', args=[self.song.pk])
+        self.client.post(url, {'body': '   '})
+        self.assertFalse(self.song.comments.exists())
+        self.client.post(url, {'body': ' Good track '})
+        self.assertEqual(self.song.comments.get().body, 'Good track')
+
+    def test_interaction_redirects_stay_on_this_site(self):
+        self.client.force_login(self.listener)
+        for name in ['toggle_like', 'add_comment']:
+            with self.subTest(action=name):
+                url = reverse(f'soundbytes:{name}', args=[self.song.pk])
+                response = self.client.post(url, {'body': 'Hello'}, HTTP_REFERER='https://example.com/')
+                self.assertRedirects(response, reverse('soundbytes:search_page'))
+                destination = reverse('soundbytes:profile', args=['artist'])
+                response = self.client.post(url, {'body': 'Hello'}, HTTP_REFERER=destination)
+                self.assertRedirects(response, destination)
+
+    def test_follow_requires_post_and_toggles_both_relationships(self):
+        self.client.force_login(self.listener)
+        url = reverse('soundbytes:toggle_follow', args=['artist'])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertFalse(Follow.objects.exists())
+        for expected in [1, 0]:
+            self.assertRedirects(self.client.post(url), reverse('soundbytes:profile', args=['artist']))
+            self.assertEqual(Follow.objects.filter(follower=self.listener, following=self.artist).count(), expected)
+            self.assertEqual(self.artist.profile.followers.filter(pk=self.listener.pk).count(), expected)
+
+    def test_missing_audio_returns_404_without_counting_a_play_or_download(self):
+        self.song.audio_file.name = 'songs/missing.mp3'
+        self.song.save(update_fields=['audio_file'])
+        for name in ['stream_song', 'download_song']:
+            with self.subTest(action=name):
+                self.assertEqual(self.client.get(reverse(f'soundbytes:{name}', args=[self.song.pk])).status_code, 404)
+        self.song.refresh_from_db()
+        self.assertEqual(self.song.view_count, 0)
+        self.assertEqual(self.song.download_count, 0)
+        self.assertFalse(self.song.downloads.exists())
+
+    def test_signup_usernames_with_matching_slugs_do_not_crash(self):
+        for username in ['other.name', 'other@name', 'OTHER.NAME', '音乐', '歌手']:
+            with self.subTest(username=username):
+                response = self.client.post(reverse('soundbytes:signup'), {
+                    'username': username, 'password': 'Test-password-2026',
+                    'confirm_password': 'Test-password-2026', 'user_type': 'LISTENER',
+                })
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(User.objects.get(username=username).profile.slug)
