@@ -18,16 +18,14 @@
                     <p class="text-body-secondary mb-2">@{{ profile_user.username }}</p>
                     {% if profile.bio %}<p class="profile-bio mb-0">{{ profile.bio }}</p>{% endif %}
                 </div>
-                <div class="d-flex gap-2">
-                    {% if is_own_profile %}
-                        <button class="btn btn-outline-secondary btn-sm" id="edit-profile-btn" type="button">Edit Profile</button>
-                    {% elif request.user.is_authenticated %}
+                {% if not is_own_profile and request.user.is_authenticated %}
+                    <div class="d-flex gap-2">
                         <form method="post" action="{% url 'soundbytes:toggle_follow' profile_user.username %}">
                             {% csrf_token %}
                             <button class="btn btn-primary btn-sm" type="submit">{% if is_following %}Following{% else %}Follow{% endif %}</button>
                         </form>
-                    {% endif %}
-                </div>
+                    </div>
+                {% endif %}
             </div>
             <div class="profile-stats">
                 <div><strong>{{ profile.follower_count }}</strong><span>Followers</span></div>
