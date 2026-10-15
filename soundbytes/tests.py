@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Album, Like, Playlist, Profile, Song
+from .models import Album, Like, Playlist, Post, Profile, Song
 
 
 class BrowsingAndPlaylistTests(TestCase):
@@ -139,3 +139,42 @@ class BrowsingAndPlaylistTests(TestCase):
         response = self.client.get(reverse('soundbytes:playlist', args=['listener', self.playlist.slug]))
         self.assertContains(response, f'href="{reverse("soundbytes:profile", args=["artist"])}"')
         self.assertNotContains(response, f'href="{reverse("soundbytes:profile", args=["listener"])}"')
+
+    def test_search_keeps_query_and_filters_after_submission(self):
+        response = self.client.get(reverse('soundbytes:search_page'), {
+            'q': 'Test song', 'type': 'songs', 'sort': 'likes',
+        })
+        self.assertContains(response, 'value="Test song"')
+        self.assertContains(response, 'value="songs" selected')
+        self.assertContains(response, 'value="likes" selected')
+
+    def test_post_search_does_not_return_songs_for_song_only_sort_options(self):
+        post = Post.objects.create(text_content='A studio update')
+        for sort_by in ['views', 'downloads']:
+            with self.subTest(sort=sort_by):
+                response = self.client.get(reverse('soundbytes:search_page'), {
+                    'type': 'posts', 'sort': sort_by,
+                })
+                self.assertContains(response, post.text_content)
+                self.assertNotContains(response, self.song.title)
+
+    def test_playlist_titles_without_ascii_letters_have_working_links(self):
+        self.client.force_login(self.listener)
+        for title in ['🎵', '音乐', '🎵']:
+            with self.subTest(title=title):
+                response = self.client.post(
+                    reverse('soundbytes:playlists', args=['listener']), {'title': title},
+                )
+                self.assertRedirects(response, reverse('soundbytes:playlists', args=['listener']))
+                playlist = Playlist.objects.latest('pk')
+                self.assertTrue(playlist.slug)
+                self.assertEqual(self.client.get(reverse(
+                    'soundbytes:playlist', args=['listener', playlist.slug],
+                )).status_code, 200)
+
+    def test_malformed_song_id_does_not_crash_add_to_playlist(self):
+        self.client.force_login(self.listener)
+        response = self.client.post(reverse('soundbytes:add_to_playlist'), {
+            'song_id': 'not-a-number', 'playlist_slug': self.playlist.slug,
+        })
+        self.assertEqual(response.status_code, 404)

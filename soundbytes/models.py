@@ -83,11 +83,14 @@ class Playlist(models.Model):
 
     def save(self,*args,**kwargs):
         if not self.slug:
-            clean_slug=slugify(self.title)
-            i = 1
-            while Playlist.objects.filter(user=self.user,slug=clean_slug).exists():
-                clean_slug = clean_slug + f'{i}'
-                i+=1
+            max_length = self._meta.get_field('slug').max_length
+            base_slug = (slugify(self.title) or 'playlist')[:max_length]
+            clean_slug = base_slug
+            index = 1
+            while Playlist.objects.filter(user=self.user, slug=clean_slug).exclude(pk=self.pk).exists():
+                suffix = f'-{index}'
+                clean_slug = base_slug[:max_length - len(suffix)] + suffix
+                index += 1
             self.slug = clean_slug
         super().save(*args,**kwargs)
 

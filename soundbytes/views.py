@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -120,66 +120,44 @@ def upload_page(request):
 
 def search_page(request):
     query = request.GET.get('q', '')
-    genre = request.GET.get('genre')
+    genre = request.GET.get('genre', '')
     sort_by = request.GET.get('sort', '')
     content_type = request.GET.get('type', 'all')
-    genres = Genre.objects.all()
-    #songs
+    song_ordering = {
+        '': '-upload_date', 'new': '-upload_date', 'likes': '-like_count',
+        'views': '-view_count', 'downloads': '-download_count',
+    }
+    if sort_by not in song_ordering:
+        sort_by = ''
+    if content_type not in {'all', 'songs', 'posts'}:
+        content_type = 'all'
+
     songs = search(query)
     if genre:
         songs = songs.filter(genres__name=genre)
-    #posts
+    songs = list(songs.order_by(song_ordering[sort_by]))
     posts = Post.objects.all()
     if query:
         posts = posts.filter(text_content__icontains=query)
-    #all sort (automatically sorts by newest)
-    if not sort_by or sort_by == 'new':
-        songs = songs.order_by('-upload_date')
-        posts = posts.order_by('-created_at')
-        songs = list(songs)
-        posts = list(posts)
-        results = []
-        if content_type == 'songs':
-            results = [{'type': 'song', 'data': s} for s in songs]
-        elif content_type == 'posts':
-            results = [{'type': 'post', 'data': p} for p in posts]
-        else:
-            #mix posts and songs
-            max_len = max(len(songs), len(posts))
-            for i in range(max_len):
-                if i < len(songs):
-                    results.append({'type': 'song', 'data': songs[i]})
-                if i < len(posts):
-                    results.append({'type': 'post', 'data': posts[i]})
-    #sort by likes
-    elif sort_by == 'likes':
-        songs = list(songs.order_by('-like_count'))
-        posts = list(posts.order_by('-like_count'))
-        results = []
-        #{comment here}
-        if content_type == 'songs':
-            results = [{'type': 'song', 'data': s} for s in songs]
-        elif content_type == 'posts':
-            results = [{'type': 'post', 'data': p} for p in posts]
-        else:
-            #{comment here}
-            max_len = max(len(songs), len(posts))
-            for i in range(max_len):
-                if i < len(songs):
-                    results.append({'type': 'song', 'data': songs[i]})
-                if i < len(posts):
-                    results.append({'type': 'post', 'data': posts[i]})
-    #sort by views
-    elif sort_by == 'views':
-        songs = songs.order_by('-view_count')
-        results = [{'type': 'song', 'data': s} for s in songs]
-    #sort by downloads
-    elif sort_by == 'downloads':
-        songs = songs.order_by('-download_count')
-        results = [{'type': 'song', 'data': s} for s in songs]
+    posts = list(posts.order_by('-like_count' if sort_by == 'likes' else '-created_at'))
+
+    if content_type == 'posts':
+        # Posts have no view/download counters, so keep them in newest order.
+        results = [{'type': 'post', 'data': post} for post in posts]
+    elif content_type == 'songs' or sort_by in {'views', 'downloads'}:
+        results = [{'type': 'song', 'data': song} for song in songs]
     else:
         results = []
-    return render(request, 'soundbytes_auth/search.html', {'results': results, 'genres': genres})
+        for index in range(max(len(songs), len(posts))):
+            if index < len(songs):
+                results.append({'type': 'song', 'data': songs[index]})
+            if index < len(posts):
+                results.append({'type': 'post', 'data': posts[index]})
+
+    return render(request, 'soundbytes_auth/search.html', {
+        'results': results, 'genres': Genre.objects.all(), 'query': query,
+        'selected_genre': genre, 'content_type': content_type, 'sort_by': sort_by,
+    })
 
 def stream_song(request, song_id):
     song = get_object_or_404(Song, id=song_id)
@@ -439,7 +417,10 @@ def playlist(request, username, slug):
 def add_to_playlist(request):
     user = request.user
     if request.method == "POST":
-        song_id = request.POST.get("song_id")
+        try:
+            song_id = int(request.POST.get("song_id", ""))
+        except (TypeError, ValueError):
+            raise Http404("Song not found")
         slug = request.POST.get("playlist_slug")
         song = get_object_or_404(Song, id=song_id)
         playlist = get_object_or_404(Playlist, slug=slug, user=user)
