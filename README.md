@@ -59,18 +59,34 @@ First pass, based on the project feedback:
 - Fixed missing-song/album requests to return 404 responses.
 - Added 15 regression tests covering the above behaviour.
 
-Remaining work from the feedback:
+## Marker feedback backlog
 
-- Make profile editing functional.
-- Validate uploads and return users to the relevant album with clear success/error messages.
-- Update likes and comments without reloading the page.
-- Redesign spacing, controls, navigation and layouts for desktop and mobile.
-- Add profile images to the sample data.
-- Consolidate duplicate view/template code and move remaining inline CSS/JavaScript into static files.
-- Audit copied `static/admin` assets and document third-party sources and media credits.
-- Expand tests to uploads, profile editing, interactions and browser journeys.
+The original feedback is tracked in [GitHub Issues](https://github.com/iluha2vuha/WAD-project-soundbyte/issues), with a source, priority and acceptance criteria for each item. Setup, guest browsing and the playlist failures are closed with evidence in `37d18db`. The testing issue remains open because the existing suite is a starting point, not comprehensive coverage.
 
-The current server settings and demo accounts are for local development. Deployment needs its own configuration and checks; the frontend redesign is still pending.
+- [#1 — Fix Python dependency compatibility and document local setup](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/1)
+- [#2 — Allow public music discovery without registration](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/2)
+- [#3 — Add useful profile images to the population script](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/3)
+- [#4 — Keep song uploads in the selected album workflow](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/4)
+- [#5 — Make Edit Profile functional](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/5)
+- [#6 — Fix adding songs to playlists and playlist creation redirects](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/6)
+- [#7 — Update likes and comments without reloading the page](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/7)
+- [#8 — Apply a simple responsive Bootstrap dark theme with green buttons](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/8)
+- [#9 — Move inline CSS and JavaScript out of page templates](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/9)
+- [#10 — Reduce repeated code in views and templates](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/10)
+- [#11 — Improve code clarity and comments for non-obvious behaviour](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/11)
+- [#12 — Document external sources and audit copied static/admin assets](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/12)
+- [#13 — Expand automated tests across the existing application flows](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/13)
+- [#14 — Review existing user journeys against the documented project scope](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/14)
+
+## Frontend theme and sources
+
+The presentation uses [Bootswatch Darkly 5.3.8](https://bootswatch.com/darkly/), a theme for [Bootstrap 5.3.8](https://getbootstrap.com/docs/5.3/). Standard Bootstrap navigation, grid, cards and form components are customised with a charcoal background and bright green primary buttons. There are no added product features in this theme change.
+
+Assets are served locally from `static/vendor/`; no CDN or remote font is required at runtime. The CSS font import and unavailable source-map references are omitted from the vendored builds. The system font stack is used instead. MIT notices are preserved in `static/vendor/bootswatch/LICENSE` and `static/vendor/bootstrap/LICENSE`. Application styles live in `static/css/styles.css`; the existing upload-type selector and trending filter live in `static/js/app.js`.
+
+The server framework is [Django](https://www.djangoproject.com/). The copied `static/admin` files and bundled demo media still need a complete source/licence audit, tracked in [#12](https://github.com/iluha2vuha/WAD-project-soundbyte/issues/12). The new Bootstrap assets are credited here; this does not resolve the historical sources question on its own.
+
+The current server settings and demo accounts are for local development. Deployment needs its own configuration and checks.
 
 ## Original group project specification
 

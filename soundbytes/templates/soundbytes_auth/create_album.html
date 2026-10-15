@@ -1,19 +1,38 @@
-{% extends 'authbase.html' %}
-
-{% block title %}Create Album{% endblock %}
-
+{% extends "authbase.html" %}
+{% block title %}Create album{% endblock %}
 {% block body %}
-<div class="content-card">
-<h2>Create Album</h2>
-
-<form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    
-    <input type="text" name="title" placeholder="Album Title"><br>
-    <input type="text" name="artist" placeholder="Artist"><br>
-    <input type="file" name="cover_image"><br>
-
-    <button type="submit">Create Album</button>
-</form>
-</div>
+    <div class="form-card">
+        <header class="page-heading">
+            <h1>Create Album</h1>
+        </header>
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="album-title">Album title</label>
+                        <input class="form-control"
+                               id="album-title"
+                               name="title"
+                               placeholder="Album title">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="album-artist">Artist</label>
+                        <input class="form-control"
+                               id="album-artist"
+                               name="artist"
+                               placeholder="Artist name">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" for="album-cover">Cover image</label>
+                        <input class="form-control"
+                               id="album-cover"
+                               type="file"
+                               name="cover_image">
+                    </div>
+                    <button class="btn btn-primary" type="submit">Create Album</button>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}

@@ -1,0 +1,15 @@
+<article class="card">
+    <div class="card-body">
+        {% if rank %}<span class="track-rank">#{{ rank }}</span>{% endif %}
+        {% if post.text_content %}
+            <p>{{ post.text_content|linebreaksbr }}</p>
+        {% endif %}
+        {% if post.image %}
+            <img class="post-image mb-3"
+                 src="{{ post.image.url }}"
+                 alt="Image attached to this post"
+                 loading="lazy">
+        {% endif %}
+        <p class="track-meta mb-0">{{ post.like_count }} likes</p>
+    </div>
+</article>

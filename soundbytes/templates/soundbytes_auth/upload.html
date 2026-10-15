@@ -1,62 +1,87 @@
-{% extends 'authbase.html' %}
-
+{% extends "authbase.html" %}
 {% block title %}Upload{% endblock %}
-
 {% block body %}
-<div class="content-card">
-<form action="/upload/" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-
-    <!-- TYPE SELECTOR -->
-    <label>Upload Type:</label>
-    <select name="content_type" id="content_type" onchange="toggleFields()">
-        <option value="song">Song</option>
-        <option value="post">Post</option>
-    </select>
-    <br><br>
-
-    <!-- SONG FIELDS -->
-    <div id="song_fields">
-        <input type="text" name="title" placeholder="Title"><br>
-        <input type="text" name="artist" placeholder="Artist"><br>
-
-        <select name="album">
-            <option value="">Select Album</option>
-            {% for album in albums %}
-                <option value="{{ album.id }}">{{ album.title }}</option>
-            {% endfor %}
-        </select><br>
-
-        <select name="genres" multiple>
-            {% for genre in genres %}
-                <option value="{{ genre.id }}">{{ genre.name }}</option>
-            {% endfor %}
-        </select><br>
-
-        <input type="text" name="tags" placeholder="Tags"><br>
-
-        <input type="file" name="audio_file"><br>
+    <div class="form-card">
+        <header class="page-heading">
+            <h1>Upload</h1>
+        </header>
+        <div class="card">
+            <div class="card-body">
+                <form action="{% url 'soundbytes:upload' %}"
+                      method="post"
+                      enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label" for="content_type">Upload type</label>
+                        <select class="form-select" name="content_type" id="content_type">
+                            <option value="song">Song</option>
+                            <option value="post">Post</option>
+                        </select>
+                    </div>
+                    <fieldset id="song_fields">
+                        <legend class="visually-hidden">Song details</legend>
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="song-title">Track title</label>
+                                <input class="form-control"
+                                       id="song-title"
+                                       name="title"
+                                       placeholder="Track title">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="song-artist">Artist</label>
+                                <input class="form-control"
+                                       id="song-artist"
+                                       name="artist"
+                                       placeholder="Artist name">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="song-album">Album</label>
+                            <select class="form-select" id="song-album" name="album">
+                                <option value="">Select an album</option>
+                                {% for album in albums %}
+                                    <option value="{{ album.id }}">{{ album.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="song-genres">Genres</label>
+                            <select class="form-select" id="song-genres" name="genres" multiple>
+                                {% for genre in genres %}
+                                    <option value="{{ genre.id }}">{{ genre.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="song-tags">Tags</label>
+                            <input class="form-control" id="song-tags" name="tags" placeholder="Tags">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="song-audio">Audio file</label>
+                            <input class="form-control"
+                                   type="file"
+                                   id="song-audio"
+                                   name="audio_file">
+                        </div>
+                    </fieldset>
+                    <fieldset id="post_fields" hidden>
+                        <legend class="visually-hidden">Post details</legend>
+                        <div class="mb-3">
+                            <label class="form-label" for="post-text">Your post</label>
+                            <textarea class="form-control" id="post-text" name="text_content" rows="4" placeholder="Post text"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="post-image">Image (optional)</label>
+                            <input class="form-control"
+                                   type="file"
+                                   id="post-image"
+                                   name="image_file">
+                        </div>
+                    </fieldset>
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <!-- POST FIELDS -->
-    <div id="post_fields" style="display:none;">
-        <textarea name="text_content" placeholder="Write something..."></textarea><br>
-        <input type="file" name="image_file"><br>
-    </div>
-
-    <button type="submit">Upload</button>
-</form>
-
-<script>
-function toggleFields() {
-    const type = document.getElementById("content_type").value;
-
-    document.getElementById("song_fields").style.display =
-        (type === "song") ? "block" : "none";
-
-    document.getElementById("post_fields").style.display =
-        (type === "post") ? "block" : "none";
-}
-</script>
-</div>
 {% endblock %}

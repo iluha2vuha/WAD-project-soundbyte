@@ -1,0 +1,90 @@
+<article class="card {% if row_layout %}track-row{% else %}h-100{% endif %}">
+    {% if show_cover %}
+        {% if song.album.cover_image %}
+            <img class="track-cover" src="{{ song.album.cover_image.url }}" alt="{{ song.album.title }} cover" loading="lazy">
+        {% else %}
+            <div class="track-cover cover-placeholder" aria-hidden="true">♫</div>
+        {% endif %}
+    {% endif %}
+    <div class="card-body {% if row_layout %}track-row-body{% else %}d-flex flex-column{% endif %}">
+        <div class="track-info">
+            {% if rank %}<span class="track-rank">#{{ rank }}</span>{% endif %}
+            <h3 class="card-title mb-1">{{ song.title }}</h3>
+            {% if show_artist %}
+                <p class="track-meta mb-2"><a href="{% url 'soundbytes:profile' song.artist %}">{{ song.artist }}</a></p>
+            {% endif %}
+            {% if show_album %}
+                <p class="small mb-2">Album: <a href="{% url 'soundbytes:album_page' song.album.id %}">{{ song.album.title }}</a></p>
+            {% endif %}
+            {% if show_genres %}
+                <p class="track-meta mb-0">
+                    {% for genre in song.genres.all %}<span class="badge text-bg-dark border me-1">{{ genre.name }}</span>{% endfor %}
+                    {% if song.tags %}<span>{{ song.tags }}</span>{% endif %}
+                </p>
+            {% endif %}
+        </div>
+        {% if show_stats %}
+            <div class="track-stats{% if not row_layout %} mt-auto{% endif %}">
+                <span>{{ song.view_count }} views</span>
+                <span>{{ song.like_count }} likes</span>
+                <span>{{ song.download_count }} downloads</span>
+            </div>
+        {% endif %}
+        {% if show_audio %}
+            <audio controls preload="none" aria-label="Listen to {{ song.title }}">
+                <source src="{% url 'soundbytes:stream_song' song.id %}" type="audio/mpeg">
+            </audio>
+        {% endif %}
+        {% if show_download or show_like %}
+            <div class="track-actions d-flex flex-wrap gap-2">
+                {% if show_like and request.user.is_authenticated %}
+                    <form method="post" action="{% url 'soundbytes:toggle_like' song.id %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-secondary btn-sm" type="submit">Like / Unlike</button>
+                    </form>
+                {% endif %}
+                {% if show_download %}
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'soundbytes:download_song' song.id %}">Download</a>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if request.user.is_authenticated %}
+            {% if show_comment_form or show_playlists %}
+                <div class="track-inputs">
+                    {% if show_comment_form %}
+                        <form class="track-interactions" method="post" action="{% url 'soundbytes:add_comment' song.id %}">
+                            {% csrf_token %}
+                            <label class="form-label" for="comment-{{ song.id }}">Add a comment</label>
+                            <div class="d-flex flex-column flex-sm-row gap-2">
+                                <input class="form-control form-control-sm" id="comment-{{ song.id }}" name="body" placeholder="Add a comment">
+                                <button class="btn btn-primary btn-sm" type="submit">Comment</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                    {% if show_playlists %}
+                        <form class="track-interactions" method="post" action="{% url 'soundbytes:add_to_playlist' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="song_id" value="{{ song.id }}">
+                            <label class="form-label" for="playlist-{{ song.id }}">Add to a playlist</label>
+                            <div class="d-flex flex-column flex-sm-row gap-2">
+                                <select class="form-select form-select-sm" id="playlist-{{ song.id }}" name="playlist_slug">
+                                    <option value="">Choose your playlist</option>
+                                    {% for p in playlists %}<option value="{{ p.slug }}">{{ p.title }}</option>{% endfor %}
+                                </select>
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">Add to Playlist</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+        {% if show_comments and song.comments.all %}
+            <div class="comment-list">
+                <h4 class="small fw-semibold">Comments</h4>
+                {% for comment in song.comments.all|slice:':5' %}
+                    <p><strong>{{ comment.user.username }}</strong> <span class="text-body-secondary">{{ comment.body }}</span></p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</article>

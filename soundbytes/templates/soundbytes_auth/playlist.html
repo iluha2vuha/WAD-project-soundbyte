@@ -1,35 +1,17 @@
-{% extends 'authbase.html' %}
-{% load static %}
-
+{% extends "authbase.html" %}
+{% block title %}{{ playlist.title }}{% endblock %}
 {% block body %}
-    <h1>{{ user.username }}'s Playlist called {{ playlist.title }}</h1>
-    {% for song in songs %}
-        <div style="border:1px solid #ccc; padding:15px; margin:15px 0; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: table;">
-            <div>
-                <p>
-                    {{ song.data.title }} -
-                    <a href="{% url 'soundbytes:profile' username=song.data.artist %}">{{ song.data.artist }}</a>
-                </p>
-
-                <p>Views: {{ song.data.view_count }}</p>
-                <p>Downloads: {{ song.data.download_count }}</p>
-                <p>Likes: {{ song.data.like_count }}</p>
-
-                <p>
-                    <a href="{% url 'soundbytes:download_song' song.data.id %}">Download</a>
-                </p>
-
-                <audio controls>
-                    <source src="{% url 'soundbytes:stream_song' song.data.id %}" type="audio/mpeg">
-                </audio>
-
-                {% if user.is_authenticated %}
-                    <form method="post" action="{% url 'soundbytes:toggle_like' song.data.id %}" style="margin-top:10px;">
-                        {% csrf_token %}
-                        <button type="submit">Like / Unlike</button>
-                    </form>
-                {% endif %}
-            </div>
-        </div>
-    {% endfor %}
+    <header class="page-heading">
+        <p class="section-label">Playlist</p>
+        <h1>{{ playlist.title }}</h1>
+        <p class="text-body-secondary mb-0">By {{ user.username }}</p>
+    </header>
+    <div class="section-heading"><h2>Tracks</h2></div>
+    <div class="track-list">
+        {% for song in songs %}
+            {% include "components/song_card.html" with song=song.data row_layout=True show_artist=True show_stats=True show_audio=True show_download=True show_like=True %}
+        {% empty %}
+            <p class="empty-state">This playlist has no songs yet.</p>
+        {% endfor %}
+    </div>
 {% endblock %}
