@@ -4,22 +4,43 @@ A music-sharing app built with Django, SQLite and Bootstrap. Browse and stream t
 
 ## Run locally
 
-Requires Python 3.13.
+Install Git and Python 3.13, then open a terminal.
+
+Clone the repository:
 
 ```sh
 git clone https://github.com/iluha2vuha/WAD-project-soundbyte.git
 cd WAD-project-soundbyte
+```
+
+Create and activate a virtual environment.
+
+macOS / Linux:
+
+```sh
 python3.13 -m venv .venv
 source .venv/bin/activate
+```
+
+Windows (Command Prompt):
+
+```bat
+py -3.13 -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+Install dependencies, create the database, load demo data and start the app:
+
+```sh
 python -m pip install -r requirements.txt
 python manage.py migrate
 python population_script.py
 python manage.py runserver 127.0.0.1:8001
 ```
 
-Open [http://127.0.0.1:8001](http://127.0.0.1:8001).
+Open [http://127.0.0.1:8001](http://127.0.0.1:8001). Stop the server with Ctrl+C.
 
-On Windows, use `py -3.13 -m venv .venv` and activate with `.venv\Scripts\Activate.ps1`, then run the same `python` commands.
+To run it again, open the project folder in a terminal, activate the virtual environment and run `python manage.py runserver 127.0.0.1:8001`. If port 8001 is busy, use 8002 and open the matching URL.
 
 ## Demo accounts
 
