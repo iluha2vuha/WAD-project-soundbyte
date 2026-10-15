@@ -6,7 +6,9 @@ if (uploadType) {
     const updateUploadFields = () => {
         const isSong = uploadType.value === 'song';
         songFields.hidden = !isSong;
+        songFields.disabled = !isSong;
         postFields.hidden = isSong;
+        postFields.disabled = isSong;
     };
     uploadType.addEventListener('change', updateUploadFields);
     updateUploadFields();

@@ -6,9 +6,8 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
-from .functions.file_manager import create_song
 from .functions.search_function import search, sort_songs
-from .forms import UserForm,ProfileForm,PlaylistForm
+from .forms import AlbumForm, PlaylistForm, PostUploadForm, ProfileForm, SongUploadForm, UserForm
 from .models import Comment, Download, Follow, Genre, Like, Song, Album, User, Profile, Post, ProfileView, Playlist
 
 def landing(request):
@@ -87,23 +86,6 @@ def home(request):
 
 
 @csrf_exempt
-def upload_song(request):
-    #must have album
-    if request.method == 'POST':
-        album_id = request.POST.get('album')
-        if not album_id:
-            #if no album return error to prevent crash
-            return JsonResponse({'error': 'You must select an album'})
-        album = Album.objects.get(id=album_id)
-        #create song!!
-        song = create_song(request.POST, request.FILES, album)
-        #assign genres and add
-        genre_ids = request.POST.getlist('genres')
-        song.genres.set(genre_ids)
-        return redirect('/search-page/')
-    return JsonResponse({'error': 'Invalid request'})
-
-@csrf_exempt
 def search_songs(request):
     query = request.GET.get('q', '')
     sort_by = request.GET.get('sort', '')
@@ -112,11 +94,17 @@ def search_songs(request):
     songs = sort_songs(songs, sort_by)
     return JsonResponse(list(songs.values()), safe=False)
 
+def _render_upload(request, *, song_form=None, post_form=None, content_type='song', error=None):
+    return render(request, 'soundbytes_auth/upload.html', {
+        'song_form': song_form if song_form is not None else SongUploadForm(auto_id='id_song_%s'),
+        'post_form': post_form if post_form is not None else PostUploadForm(auto_id='id_post_%s'),
+        'content_type': content_type, 'upload_error': error,
+    })
+
+
 @login_required
 def upload_page(request):
-    genres = Genre.objects.all()
-    albums = Album.objects.all()
-    return render(request, 'soundbytes_auth/upload.html', {'genres': genres, 'albums': albums})
+    return _render_upload(request)
 
 def search_page(request):
     query = request.GET.get('q', '')
@@ -169,18 +157,11 @@ def stream_song(request, song_id):
 
 @login_required
 def create_album(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        artist = request.POST.get('artist')
-        cover = request.FILES.get('cover_image')
-        #create album with data above got from page
-        Album.objects.create(
-            title=title,
-            artist=artist,
-            cover_image=cover
-        )
-        return redirect('/upload-page/')
-    return render(request, 'soundbytes_auth/create_album.html')
+    form = AlbumForm(request.POST if request.method == 'POST' else None, request.FILES or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('soundbytes:upload_page')
+    return render(request, 'soundbytes_auth/create_album.html', {'form': form})
 
 def album_page(request, album_id):
     #displays songs in that album
@@ -208,24 +189,24 @@ def top_page(request):
     return redirect(reverse('soundbytes:trending'))
 
 @login_required
+@require_POST
 def upload(request):
-    if request.method == 'POST':
-        content_type = request.POST.get('content_type')
-        if content_type == 'song':
-            return upload_song(request)
-        elif content_type == 'post':
-            return upload_post(request)
-        else:
-            return JsonResponse({'error': f'Invalid content type: {content_type}'})
-    return JsonResponse({'error': 'Invalid request'})
-
-def upload_post(request):
-    text = request.POST.get('text_content')
-    image = request.FILES.get('image_file')
-    if not text and not image:
-        return JsonResponse({'error': 'Post must contain text or an image'})
-    Post.objects.create(text_content=text, image=image)
-    return redirect('/search-page/')
+    content_type = request.POST.get('content_type')
+    if content_type == 'song':
+        form = SongUploadForm(request.POST, request.FILES, auto_id='id_song_%s')
+        if form.is_valid():
+            song = form.save()
+            return redirect('soundbytes:album_page', album_id=song.album_id)
+        return _render_upload(request, song_form=form)
+    if content_type == 'post':
+        form = PostUploadForm(request.POST, request.FILES, auto_id='id_post_%s')
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.image = form.cleaned_data['image_file']
+            post.save()
+            return redirect('soundbytes:search_page')
+        return _render_upload(request, post_form=form, content_type='post')
+    return _render_upload(request, error='Select a valid upload type.')
 
 # Update your profile_view to include analytics
 def profile(request, username):

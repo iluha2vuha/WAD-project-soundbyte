@@ -178,3 +178,77 @@ class BrowsingAndPlaylistTests(TestCase):
             'song_id': 'not-a-number', 'playlist_slug': self.playlist.slug,
         })
         self.assertEqual(response.status_code, 404)
+
+    def test_invalid_song_uploads_show_errors_without_saving(self):
+        self.client.force_login(self.artist)
+        for changes in [{}, {'album': 'invalid'}, {'title': 'x' * 51}, {'genres': ['999']}]:
+            with self.subTest(changes=changes):
+                data = {'content_type': 'song', 'title': 'New song', 'artist': 'artist',
+                        'album': self.album.pk, **changes}
+                if changes:
+                    data['audio_file'] = SimpleUploadedFile('new.mp3', self.audio_bytes, content_type='audio/mpeg')
+                response = self.client.post(reverse('soundbytes:upload'), data)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, 'soundbytes_auth/upload.html')
+                self.assertTrue(response.context['song_form'].errors)
+                self.assertEqual(Song.objects.count(), 1)
+
+    def test_song_upload_redirects_to_its_album(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:upload'), {
+            'content_type': 'song', 'title': 'New song', 'artist': 'artist',
+            'album': self.album.pk, 'tags': ' Calm, STUDIO ',
+            'audio_file': SimpleUploadedFile('new.mp3', self.audio_bytes, content_type='audio/mpeg'),
+        })
+        self.assertRedirects(response, reverse('soundbytes:album_page', args=[self.album.pk]))
+        self.assertEqual(Song.objects.get(title='New song').tags, 'calm,studio')
+
+    def test_empty_post_upload_shows_errors_without_saving(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:upload'), {
+            'content_type': 'post', 'text_content': '   ',
+        })
+        self.assertTemplateUsed(response, 'soundbytes_auth/upload.html')
+        self.assertTrue(response.context['post_form'].errors)
+        self.assertFalse(Post.objects.exists())
+
+    def test_text_post_upload_still_works(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:upload'), {
+            'content_type': 'post', 'text_content': 'Studio update',
+        })
+        self.assertRedirects(response, reverse('soundbytes:search_page'))
+        self.assertEqual(Post.objects.get().text_content, 'Studio update')
+
+    def test_image_only_post_upload_still_works(self):
+        self.client.force_login(self.artist)
+        image = (Path(__file__).resolve().parent.parent / 'sample_data/images/wall.png').read_bytes()
+        response = self.client.post(reverse('soundbytes:upload'), {
+            'content_type': 'post', 'image_file': SimpleUploadedFile('post.png', image, content_type='image/png'),
+        })
+        self.assertRedirects(response, reverse('soundbytes:search_page'))
+        self.assertTrue(Post.objects.get().image)
+
+    def test_invalid_post_image_shows_error_without_saving(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:upload'), {
+            'content_type': 'post', 'text_content': 'Update',
+            'image_file': SimpleUploadedFile('fake.png', b'not an image', content_type='image/png'),
+        })
+        self.assertTrue(response.context['post_form'].errors)
+        self.assertFalse(Post.objects.exists())
+
+    def test_album_creation_rejects_missing_details(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:create_album'), {'title': '', 'artist': ''})
+        self.assertTemplateUsed(response, 'soundbytes_auth/create_album.html')
+        self.assertTrue(response.context['form'].errors)
+        self.assertEqual(Album.objects.count(), 1)
+
+    def test_album_creation_keeps_optional_cover_and_opens_upload(self):
+        self.client.force_login(self.artist)
+        response = self.client.post(reverse('soundbytes:create_album'), {
+            'title': 'Second album', 'artist': 'artist',
+        })
+        self.assertRedirects(response, reverse('soundbytes:upload_page'))
+        self.assertTrue(Album.objects.filter(title='Second album').exists())
